@@ -62,7 +62,7 @@ else:
 
             if st.button("💾 SALVAR CHAMADA"):
                 with st.spinner("Gravando..."):
-                    # Criando os novos dados como Texto Puro
+                    # Criando os novos dados como Texto Puro para evitar erros de formato
                     novos_dados = pd.DataFrame({
                         "Data": [data_sel.strftime('%d/%m/%Y')] * len(chamada_edit),
                         "Turma": [str(turma_sel)] * len(chamada_edit),
@@ -73,20 +73,23 @@ else:
                     try:
                         # Lê o histórico existente e garante que tudo seja lido como Texto
                         hist_existente = conn.read(worksheet="Historico", ttl=0).astype(str)
-                        # Junta sem erros de formato
+                        # Junta os dados novos com os antigos
                         df_final = pd.concat([hist_existente, novos_dados], ignore_index=True)
                         conn.update(worksheet="Historico", data=df_final)
                     except:
-                        # Se a aba estiver limpa, ele começa aqui
+                        # Se a aba estiver limpa ou der erro de leitura, inicia o histórico
                         conn.update(worksheet="Historico", data=novos_dados)
                     
-                    st.success("✅ Salvo com sucesso na planilha!")
+                    st.success("✅ Chamada salva com sucesso!")
                     st.balloons()
         
         else:
             st.markdown("<div class='header-title'>HISTÓRICO</div>", unsafe_allow_html=True)
             df_h = conn.read(worksheet="Historico", ttl=0)
-            st.dataframe(df_h, use_container_width=True, hide_index=True)
+            if not df_h.empty:
+                st.dataframe(df_h, use_container_width=True, hide_index=True)
+            else:
+                st.write("Nenhum registro encontrado.")
 
     except Exception as e:
         st.error(f"Erro no sistema: {e}")
