@@ -6,6 +6,7 @@ from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="Diário Prof. Marco", layout="centered")
 
+# 🎨 ESTILO MELHORADO
 st.markdown("""
 <style>
 .header {
@@ -14,17 +15,29 @@ st.markdown("""
     border-radius: 10px;
     text-align: center;
     color: white;
-    font-size: 22px;
+    font-size: 20px;
     font-weight: bold;
     margin-bottom: 15px;
 }
 
-.aluno {
+.aluno-linha {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 6px 0;
+    padding: 4px 0;
     border-bottom: 1px solid #222;
+    font-size: 15px;
+}
+
+.stRadio > div {
+    flex-direction: row;
+    gap: 6px;
+}
+
+.stButton button {
+    width: 100%;
+    border-radius: 8px;
+    font-weight: bold;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -46,7 +59,6 @@ def conectar():
 try:
     planilha = conectar()
 
-    # 📥 Ler dados
     aba_alunos = planilha.worksheet("Alunos")
     dados = aba_alunos.get_all_records()
     df_alunos = pd.DataFrame(dados)
@@ -69,19 +81,24 @@ try:
 
     chamada_lista = []
 
-    # 📋 Lista
+    # 📋 LISTA MAIS COMPACTA
     for i, row in df_turma.iterrows():
 
         if f"status_{i}" not in st.session_state:
             st.session_state[f"status_{i}"] = "P"
 
-        col_nome, col_radio = st.columns([4,1])
+        col_nome, col_radio = st.columns([6,2])
 
         with col_nome:
-            st.write(row["Nome"])
+            st.markdown(f"<div class='aluno-linha'>{row['Nome']}</div>", unsafe_allow_html=True)
 
         with col_radio:
-            status = st.radio("", ["P", "F"], horizontal=True, key=f"status_{i}")
+            status = st.radio(
+                "",
+                ["P", "F"],
+                horizontal=True,
+                key=f"status_{i}"
+            )
 
         chamada_lista.append({
             "Nome": row["Nome"],
