@@ -1,17 +1,18 @@
 import streamlit as st
 import pandas as pd
 from datetime import date
-from streamlit_gsheets import GSheetsConnection
+import gspread
+from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="Diário Prof. Marco", layout="centered")
 
-# 🎨 ESTILO (leve, sem quebrar nada)
+# 🎨 ESTILO MELHORADO
 st.markdown("""
 <style>
 .header {
     background: linear-gradient(90deg, #0d47a1, #1565c0);
-    padding: 10px;
-    border-radius: 8px;
+    padding: 12px;
+    border-radius: 10px;
     text-align: center;
     color: white;
     font-size: 20px;
@@ -19,30 +20,49 @@ st.markdown("""
     margin-bottom: 15px;
 }
 
-.nome {
+.aluno-linha {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    border-bottom: 1px solid #222;
     font-size: 15px;
-    margin-bottom: 2px;
 }
 
-.linha {
-    margin-bottom: 10px;
-    border-bottom: 1px solid #333;
-    padding-bottom: 6px;
+.stRadio > div {
+    flex-direction: row;
+    gap: 6px;
+}
+
+.stButton button {
+    width: 100%;
+    border-radius: 8px;
+    font-weight: bold;
 }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="header">📋 DIÁRIO DE CLASSE</div>', unsafe_allow_html=True)
 
+# 🔐 Conexão
+def conectar():
+    scope = ["https://www.googleapis.com/auth/spreadsheets"]
+
+    creds = Credentials.from_service_account_info(
+        st.secrets["connections"]["gsheets"],
+        scopes=scope
+    )
+
+    client = gspread.authorize(creds)
+    return client.open_by_key("1XfCFGVI9PUalRhiSBbQ95ZIjCz4IGhOT1m4_LeQGF1A")
+
 try:
-    # 🔐 CONEXÃO ORIGINAL (não mexe nisso)
-    conn = st.connection("gsheets", type=GSheetsConnection)
-conn = st.connection("gsheets", type=GSheetsConnection)
+    planilha = conectar()
 
-st.write("SECRETS:", st.secrets)
-st.stop()
+    aba_alunos = planilha.worksheet("Alunos")
+    dados = aba_alunos.get_all_records()
+    df_alunos = pd.DataFrame(dados)
 
-    df_alunos = conn.read(worksheet="Alunos", ttl=0)
     df_alunos = df_alunos.dropna(subset=["Nome"])
 
     turmas = sorted(df_alunos["Turma"].dropna().unique())
@@ -61,21 +81,24 @@ st.stop()
 
     chamada_lista = []
 
+    # 📋 LISTA MAIS COMPACTA
     for i, row in df_turma.iterrows():
 
         if f"status_{i}" not in st.session_state:
             st.session_state[f"status_{i}"] = "P"
 
-        st.markdown(f"<div class='linha'><div class='nome'>{row['Nome']}</div>", unsafe_allow_html=True)
+        col_nome, col_radio = st.columns([6,2])
 
-        status = st.radio(
-            "",
-            ["P", "F"],
-            horizontal=True,
-            key=f"status_{i}"
-        )
+        with col_nome:
+            st.markdown(f"<div class='aluno-linha'>{row['Nome']}</div>", unsafe_allow_html=True)
 
-        st.markdown("</div>", unsafe_allow_html=True)
+        with col_radio:
+            status = st.radio(
+                "",
+                ["P", "F"],
+                horizontal=True,
+                key=f"status_{i}"
+            )
 
         chamada_lista.append({
             "Nome": row["Nome"],
@@ -90,22 +113,18 @@ st.stop()
     chamada = pd.DataFrame(chamada_lista)
 
     if salvar:
-        novos_dados = pd.DataFrame({
-            "Data": [data_sel.strftime('%d/%m/%Y')] * len(chamada),
-            "Turma": [str(turma_sel)] * len(chamada),
-            "Nome": chamada['Nome'],
-            "Status": chamada['Status']
-        })
+        aba_hist = planilha.worksheet("Historico")
 
-        try:
-            hist = conn.read(worksheet="Historico", ttl=0)
-            final = pd.concat([hist, novos_dados], ignore_index=True)
-            conn.update(worksheet="Historico", data=final)
-        except:
-            conn.update(worksheet="Historico", data=novos_dados)
+        for _, row in chamada.iterrows():
+            aba_hist.append_row([
+                data_sel.strftime('%d/%m/%Y'),
+                turma_sel,
+                row["Nome"],
+                row["Status"]
+            ])
 
         st.success("Chamada salva com sucesso!")
         st.balloons()
 
 except Exception as e:
-    st.error(f"Erro de conexão: {e}")
+    st.error(f"Erro geral: {e}")
