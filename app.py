@@ -3,13 +3,11 @@ import pandas as pd
 from datetime import date
 from streamlit_gsheets import GSheetsConnection
 
-# 🔥 TESTE DE VERSÃO (troque o número sempre que atualizar)
-st.write("VERSÃO 3.0")
+# 🔥 TESTE DE VERSÃO (troque o número quando atualizar)
+st.write("VERSÃO 4.0")
 
-# Configuração da página
 st.set_page_config(page_title="Diário Prof. Marco", layout="centered")
 
-# 🎨 CSS
 st.markdown("""
 <style>
 .header-title {
@@ -37,10 +35,19 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 try:
-    # Conexão com Google Sheets
+    # 🔥 conexão
     conn = st.connection("gsheets", type=GSheetsConnection)
-    
-    df_alunos = conn.read(worksheet="Alunos", ttl=0)
+
+    # 🔥 ID fixo da planilha (resolve erro local)
+    SPREADSHEET_ID = "1XfCFGVI9PUalRhiSBbQ95ZIjCz4IGhOT1m4_LeQGF1A"
+
+    # 🔥 leitura correta
+    df_alunos = conn.read(
+        worksheet="Alunos",
+        spreadsheet=SPREADSHEET_ID,
+        ttl=0
+    )
+
     df_alunos = df_alunos.dropna(subset=['Nome'])
 
     st.markdown("<div class='header-title'>📋 DIÁRIO DE CLASSE</div>", unsafe_allow_html=True)
@@ -118,11 +125,26 @@ try:
             })
 
             try:
-                historico = conn.read(worksheet="Historico", ttl=0)
+                historico = conn.read(
+                    worksheet="Historico",
+                    spreadsheet=SPREADSHEET_ID,
+                    ttl=0
+                )
+
                 final = pd.concat([historico, novos_dados], ignore_index=True)
-                conn.update(worksheet="Historico", data=final)
+
+                conn.update(
+                    worksheet="Historico",
+                    data=final,
+                    spreadsheet=SPREADSHEET_ID
+                )
+
             except:
-                conn.update(worksheet="Historico", data=novos_dados)
+                conn.update(
+                    worksheet="Historico",
+                    data=novos_dados,
+                    spreadsheet=SPREADSHEET_ID
+                )
 
             st.success("Chamada salva com sucesso!")
             st.balloons()
