@@ -37,6 +37,10 @@ st.markdown('<div class="header">📋 DIÁRIO DE CLASSE</div>', unsafe_allow_htm
 try:
     # 🔐 CONEXÃO ORIGINAL (não mexe nisso)
     conn = st.connection("gsheets", type=GSheetsConnection)
+conn = st.connection("gsheets", type=GSheetsConnection)
+
+st.write("SECRETS:", st.secrets)
+st.stop()
 
     df_alunos = conn.read(worksheet="Alunos", ttl=0)
     df_alunos = df_alunos.dropna(subset=["Nome"])
