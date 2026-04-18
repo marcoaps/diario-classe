@@ -5,13 +5,13 @@ from streamlit_gsheets import GSheetsConnection
 
 st.set_page_config(page_title="Diário Prof. Marco", layout="centered")
 
-# 🎨 ESTILO MELHORADO
+# 🎨 ESTILO (leve, sem quebrar nada)
 st.markdown("""
 <style>
 .header {
     background: linear-gradient(90deg, #0d47a1, #1565c0);
-    padding: 12px;
-    border-radius: 10px;
+    padding: 10px;
+    border-radius: 8px;
     text-align: center;
     color: white;
     font-size: 20px;
@@ -19,15 +19,15 @@ st.markdown("""
     margin-bottom: 15px;
 }
 
-.linha {
-    padding: 6px 0;
-    border-bottom: 1px solid #333;
-    margin-bottom: 4px;
+.nome {
+    font-size: 15px;
+    margin-bottom: 2px;
 }
 
-.stRadio > div {
-    flex-direction: row;
-    gap: 10px;
+.linha {
+    margin-bottom: 10px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 6px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -35,6 +35,7 @@ st.markdown("""
 st.markdown('<div class="header">📋 DIÁRIO DE CLASSE</div>', unsafe_allow_html=True)
 
 try:
+    # 🔐 CONEXÃO ORIGINAL (não mexe nisso)
     conn = st.connection("gsheets", type=GSheetsConnection)
 
     df_alunos = conn.read(worksheet="Alunos", ttl=0)
@@ -61,7 +62,7 @@ try:
         if f"status_{i}" not in st.session_state:
             st.session_state[f"status_{i}"] = "P"
 
-        st.markdown(f"<div class='linha'>{row['Nome']}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='linha'><div class='nome'>{row['Nome']}</div>", unsafe_allow_html=True)
 
         status = st.radio(
             "",
@@ -69,6 +70,8 @@ try:
             horizontal=True,
             key=f"status_{i}"
         )
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
         chamada_lista.append({
             "Nome": row["Nome"],
