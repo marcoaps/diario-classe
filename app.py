@@ -3,6 +3,9 @@ import pandas as pd
 from datetime import date
 from streamlit_gsheets import GSheetsConnection
 
+# 🔥 TESTE DE ATUALIZAÇÃO
+st.write("VISUAL NOVO FUNCIONANDO")
+
 st.set_page_config(page_title="Diário Prof. Marco", layout="centered")
 
 # 🎨 ESTILO MELHORADO
@@ -40,19 +43,24 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 try:
+    # 🔗 Conexão com Google Sheets
     conn = st.connection("gsheets", type=GSheetsConnection)
 
+    # 📥 Lê os alunos
     df_alunos = conn.read(worksheet="Alunos", ttl=0)
     df_alunos = df_alunos.dropna(subset=['Nome'])
 
+    # 🧾 Cabeçalho
     st.markdown("<div class='header'>📋 DIÁRIO DE CLASSE</div>", unsafe_allow_html=True)
 
+    # 🎯 Filtros
     turmas = sorted(df_alunos['Turma'].dropna().unique())
     turma_sel = st.selectbox("Turma", turmas)
     data_sel = st.date_input("Data", date.today())
 
     df_turma = df_alunos[df_alunos['Turma'] == turma_sel][['Nome']]
 
+    # 🔘 Botões
     col1, col2 = st.columns(2)
 
     with col1:
@@ -63,24 +71,26 @@ try:
 
     chamada_lista = []
 
+    # 📋 Lista de chamada
     for i, row in df_turma.iterrows():
 
         if f"status_{i}" not in st.session_state:
             st.session_state[f"status_{i}"] = "P"
 
-        col_nome, col_radio = st.columns([4,1])
+        col_nome, col_radio = st.columns([4, 1])
 
         with col_nome:
             st.write(row["Nome"])
 
         with col_radio:
-            status = st.radio("", ["P","F"], horizontal=True, key=f"status_{i}")
+            status = st.radio("", ["P", "F"], horizontal=True, key=f"status_{i}")
 
         chamada_lista.append({
             "Nome": row["Nome"],
             "Status": status
         })
 
+    # ✔️ Marcar todos
     if marcar_todos:
         for i in range(len(df_turma)):
             st.session_state[f"status_{i}"] = "P"
@@ -88,6 +98,7 @@ try:
 
     chamada = pd.DataFrame(chamada_lista)
 
+    # 💾 Salvar
     if salvar:
         novos_dados = pd.DataFrame({
             "Data": [data_sel.strftime('%d/%m/%Y')] * len(chamada),
