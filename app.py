@@ -3,98 +3,133 @@ import pandas as pd
 from datetime import date
 from streamlit_gsheets import GSheetsConnection
 
+# 🔥 TESTE DE VERSÃO (troque o número sempre que atualizar)
+st.write("VERSÃO 3.0")
+
 # Configuração da página
 st.set_page_config(page_title="Diário Prof. Marco", layout="centered")
 
+# 🎨 CSS
 st.markdown("""
-    <style>
-    .header-title { color: white; text-align: center; font-size: 22px; font-weight: bold; background-color: #0d47a1; padding: 10px; border-radius: 8px; }
-    .stButton>button { background-color: #2e7d32 !important; color: white !important; font-weight: bold; width: 100%; height: 3.5em; border-radius: 10px; }
-    header {visibility: hidden;}
-    </style>
-    """, unsafe_allow_html=True)
+<style>
+.header-title {
+    color: white;
+    text-align: center;
+    font-size: 22px;
+    font-weight: bold;
+    background-color: #0d47a1;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+.stButton>button {
+    background-color: #2e7d32 !important;
+    color: white !important;
+    font-weight: bold;
+    width: 100%;
+    height: 3em;
+    border-radius: 8px;
+}
+.block-container {
+    padding-top: 1rem;
+}
+</style>
+""", unsafe_allow_html=True)
 
 try:
+    # Conexão com Google Sheets
     conn = st.connection("gsheets", type=GSheetsConnection)
     
     df_alunos = conn.read(worksheet="Alunos", ttl=0)
     df_alunos = df_alunos.dropna(subset=['Nome'])
-    
-    st.markdown("<div class='header-title'>📝 DIÁRIO DE CLASSE</div>", unsafe_allow_html=True)
-    
+
+    st.markdown("<div class='header-title'>📋 DIÁRIO DE CLASSE</div>", unsafe_allow_html=True)
+
     turmas = sorted(df_alunos['Turma'].dropna().unique())
-    turma_sel = st.selectbox("Selecione a Turma:", turmas)
-    data_sel = st.date_input("Data da Aula:", date.today())
-    
+    turma_sel = st.selectbox("Turma:", turmas)
+    data_sel = st.date_input("Data:", date.today())
+
     df_turma = df_alunos[df_alunos['Turma'] == turma_sel][['Nome']].copy()
 
     st.markdown("### Chamada")
 
-    # BOTÕES LADO A LADO
-    col_btn1, col_btn2 = st.columns(2)
+    # BOTÕES
+    col1, col2, col3 = st.columns(3)
 
-    with col_btn1:
-        marcar_todos = st.button("✔️ Marcar todos como P")
+    with col1:
+        marcar_todos = st.button("✔️ Todos P")
 
-    with col_btn2:
-        salvar = st.button("💾 Salvar na Nuvem")
+    with col2:
+        salvar = st.button("💾 Salvar")
 
-    # LISTA DE CHAMADA
+    with col3:
+        resetar = st.button("🔄 Reset")
+
     chamada_lista = []
 
+    # LISTA DE CHAMADA
     for i, row in df_turma.iterrows():
-        col1, col2 = st.columns([4, 1])
-        
-        with col1:
-            st.write(row["Nome"])
-        
-        with col2:
-            # valor padrão = P
-            if f"status_{i}" not in st.session_state:
-                st.session_state[f"status_{i}"] = "P"
 
+        if f"status_{i}" not in st.session_state:
+            st.session_state[f"status_{i}"] = "P"
+
+        c1, c2 = st.columns([3,1])
+
+        with c1:
+            st.write(row["Nome"])
+
+        with c2:
             status = st.radio(
                 "",
                 ["P", "F"],
                 horizontal=True,
                 key=f"status_{i}"
             )
-        
+
         chamada_lista.append({
             "Nome": row["Nome"],
             "Status": status
         })
 
-    # AÇÃO: MARCAR TODOS
+    # MARCAR TODOS
     if marcar_todos:
         for i in range(len(df_turma)):
             st.session_state[f"status_{i}"] = "P"
         st.rerun()
 
+    # RESETAR
+    if resetar:
+        for key in list(st.session_state.keys()):
+            if "status_" in key:
+                del st.session_state[key]
+        st.cache_data.clear()
+        st.rerun()
+
     chamada = pd.DataFrame(chamada_lista)
 
-    # AÇÃO: SALVAR
+    # SALVAR
     if salvar:
-        with st.spinner("Gravando dados..."):
+        with st.spinner("Salvando..."):
             novos_dados = pd.DataFrame({
                 "Data": [data_sel.strftime('%d/%m/%Y')] * len(chamada),
                 "Turma": [str(turma_sel)] * len(chamada),
-                "Nome": chamada['Nome'].astype(str).values,
-                "Status": chamada['Status'].astype(str).values
+                "Nome": chamada['Nome'],
+                "Status": chamada['Status']
             })
-            
+
             try:
-                hist_atual = conn.read(worksheet="Historico", ttl=0)
-                df_final = pd.concat([hist_atual, novos_dados], ignore_index=True)
-                conn.update(worksheet="Historico", data=df_final)
+                historico = conn.read(worksheet="Historico", ttl=0)
+                final = pd.concat([historico, novos_dados], ignore_index=True)
+                conn.update(worksheet="Historico", data=final)
             except:
                 conn.update(worksheet="Historico", data=novos_dados)
-            
-            st.success("✅ Chamada registrada com sucesso!")
+
+            st.success("Chamada salva com sucesso!")
             st.balloons()
 
 except Exception as e:
     st.error(f"Erro de Conexão: {e}")
-    if st.button("🔄 RECONECTAR"):
+
+    if st.button("🔄 Reconectar"):
         st.cache_data.clear()
         st.rerun()
